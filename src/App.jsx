@@ -1,33 +1,28 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import UpdateItem from "./components/UpdateItem";
+import axios from "axios";
 
-// use the following link to get the data
-// `/doors` will give you all the doors, to get a specific door use `/doors/1`.
 const API_URI = `http://${import.meta.env.VITE_API_URI}/doors`;
 
 function App() {
-  // State to store the existing item
-  const [item, setItem] = useState(null);
+  const [itemId, setItemId] = useState(null);
 
-  // Fetch the existing item when the component mounts
   useEffect(() => {
-    const fetchItem = async () => {
+    const fetchDoors = async () => {
       try {
-        const response = await fetch(`${API_URI}/1`); // Fetch a specific door (e.g., door 1)
-        if (!response.ok) {
-          throw new Error("Failed to fetch item");
+        const response = await axios.get(API_URI);
+        if (response.data.length > 0) {
+          setItemId(response.data[0].id); // Assuming there's at least one door
         }
-        const data = await response.json();
-        setItem(data);
       } catch (error) {
-        console.error("Error fetching item:", error);
+        console.error("Error fetching doors:", error);
       }
     };
 
-    fetchItem();
+    fetchDoors();
   }, []);
 
-  return <UpdateItem item={item} />;
+  return itemId ? <UpdateItem itemId={itemId} /> : <p>Loading doors...</p>;
 }
 
 export default App;

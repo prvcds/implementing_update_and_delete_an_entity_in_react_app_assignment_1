@@ -1,69 +1,78 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 
-const UpdateItem = () => {
-    const [item, setItem] = useState({});
-    const [updatedData, setUpdatedData] = useState("");
-    const [message, setMessage] = useState("");
+const API_URI = `http://${import.meta.env.VITE_API_URI}/doors`;
 
-    // Fetch existing item when the component mounts
-    useEffect(() => {
-        fetchItem();
-    }, []);
+const UpdateItem = ({ itemId }) => {
+  const [item, setItem] = useState(null);
+  const [updatedValue, setUpdatedValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState(null);
 
-    // Function to fetch the existing item
+  useEffect(() => {
     const fetchItem = async () => {
-        try {
-            const response = await fetch(`${import.meta.env.API_URI}/item/1`);
-            if (!response.ok) throw new Error("Failed to fetch item");
-            const data = await response.json();
-            setItem(data);
-            setUpdatedData(data.name); // Replace "name" with the actual field name
-        } catch (error) {
-            setMessage(`Error: ${error.message}`);
-        }
+      try {
+        const response = await axios.get(`${API_URI}/${itemId}`);
+        setItem(response.data);
+        setUpdatedValue(response.data.name); // Assuming 'name' is the field to update
+      } catch (err) {
+        setError("Error fetching item: " + err.message);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    // Handle user input changes
-    const handleInputChange = (e) => {
-        setUpdatedData(e.target.value);
-    };
+    fetchItem();
+  }, [itemId]);
 
-    // Function to update the item
-    const updateItem = async () => {
-        try {
-            const response = await fetch(`${import.meta.env.API_URI}/item/1`, {
-                method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ name: updatedData }), // Replace "name" with the actual field name
-            });
+  const handleInputChange = (e) => {
+    setUpdatedValue(e.target.value);
+  };
 
-            if (!response.ok) throw new Error("Failed to update item");
-            const data = await response.json();
-            setMessage("Item updated successfully!");
-            setItem(data);
-        } catch (error) {
-            setMessage(`Error: ${error.message}`);
-        }
-    };
+  const handleUpdate = async () => {
+    if (!updatedValue.trim()) {
+      setError("Name cannot be empty.");
+      return;
+    }
 
-    return (
+    setUpdating(true);
+    setError(null);
+    try {
+      const response = await axios.put(`${API_URI}/${itemId}`, {
+        name: updatedValue,
+      });
+      setItem(response.data);
+      alert("Item updated successfully!");
+    } catch (err) {
+      setError("Error updating item: " + err.message);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  if (loading) return <p>Loading...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
+
+  return (
+    <div>
+      <h2>Update Item</h2>
+      {item && (
         <div>
-            <h2>Update Item</h2>
-            {message && <p>{message}</p>}
-            <div>
-                <p>Current Item: {item.name}</p> {/* Replace "name" with the actual field name */}
-                <input
-                    type="text"
-                    value={updatedData}
-                    onChange={handleInputChange}
-                    placeholder="Update item name"
-                />
-                <button onClick={updateItem}>Update</button>
-            </div>
+          <p>Current Name: {item.name}</p>
+          <input
+            type="text"
+            value={updatedValue}
+            onChange={handleInputChange}
+            disabled={updating}
+          />
+          <button onClick={handleUpdate} disabled={updating}>
+            {updating ? "Saving..." : "Update"}
+          </button>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default UpdateItem;
